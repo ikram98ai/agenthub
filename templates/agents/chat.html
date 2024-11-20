@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid d-flex vh-100 p-0">
+    <!-- Sidebar -->
+    <div class="bg-dark text-white sidebar p-3" style="width: 250px;">
+        <h4>Agents</h4>
+        <ul class="list-group list-group-flush">
+            {% for agent in request.user.agents.all %}
+                <li class="list-group-item list-group-item-dark">
+                    <a href="{% url 'chat_view' agent.id %}" class="text-white text-decoration-none d-flex align-items-center">
+                        <img src="https://via.placeholder.com/40" alt="Agent Avatar" class="rounded-circle me-2">
+                        <span>{{ agent.name }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Main Chat Panel -->
+    <div class="flex-grow-1 d-flex flex-column">
+        <!-- Chat Header -->
+        <div class="bg-secondary text-white p-3 d-flex align-items-center">
+            <h5 class="m-0">Chat with {{ agent.name }}</h5>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-window" class="flex-grow-1 p-3 bg-dark text-white overflow-auto" style="height: calc(100vh - 150px);">
+            {% for message in chat.messages.all %}
+                {% if message.sender == 'user' %}
+                    <div class="d-flex justify-content-end mb-2">
+                        <div class="bg-primary text-white p-2 rounded" style="max-width: 70%;">
+                            <strong>You:</strong> {{ message.message }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="d-flex justify-content-start mb-2">
+                        <div class="bg-secondary text-white p-2 rounded" style="max-width: 70%;">
+                            <strong>{{ agent.name }}:</strong> {{ message.message }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Chat Input -->
+        <div class="bg-secondary p-3">
+            <form id="chat-form" hx-post="{% url 'send_message' chat.id %}" hx-swap="outerHTML">
+                <div class="input-group">
+                    <input type="text" name="message" class="form-control" placeholder="Type a message..." required>
+                    <button class="btn btn-primary">Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container mt-5">
+        <form method="get" id="filter-form">
+            <div class="input-group mb-3">
+                <input type="text" name="q" class="form-control" placeholder="Search agents..." value="{{ request.GET.q }}">
+                <select name="usecase" class="form-select">
+                    <option value="">Filter by Use Case</option>
+                    {% for usecase in usecases %}
+                        <option value="{{ usecase.id }}" {% if usecase.id|stringformat:"s" == request.GET.usecase %}selected{% endif %}>
+                            {{ usecase.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <select name="llm" class="form-select">
+                    <option value="">Filter by LLM</option>
+                    {% for llm in llms %}
+                        <option value="{{ llm.id }}" {% if llm.id|stringformat:"s" == request.GET.llm %}selected{% endif %}>
+                            {{ llm.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </form>
+        <div id="agent-list">
+            {% include 'partials/agent_list.html' %}
+        </div>
+    </div>
+{% endblock %}
