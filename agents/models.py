@@ -2,11 +2,18 @@ from django.db import models
 from django.contrib.auth.models import User  # For user authentication
 
 
+# models.py
+from django.db import models
+from django.urls import reverse
+
+
 class Usecase(models.Model):
     name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
+
     
 class AgentLLM(models.Model):
     name = models.CharField(max_length=100)
@@ -19,6 +26,7 @@ class Agent(models.Model):
     description = models.TextField()
     url = models.URLField(default="#")
     created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
     usecases = models.ManyToManyField(Usecase, related_name='agents')
@@ -27,12 +35,25 @@ class Agent(models.Model):
         return self.name
     
 
-class AgentInput(models.Model):
-    name = models.CharField(max_length=100)
-    agent = models.ForeignKey(Agent,on_delete=models.CASCADE,related_name='inputs')
+    def get_absolute_url(self):
+        return reverse('agent-detail', args=[str(self.id)])
 
+
+class AgentInput(models.Model):
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='inputs')
+    name = models.CharField(max_length=100)
+    input_type = models.CharField(max_length=50, choices=[
+        ('text', 'Text'),
+        ('file', 'File'),
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+    ],default='text')
+    is_required = models.BooleanField(default=True)
+    description = models.TextField(blank=True, null=True)    
     def __str__(self):
-        return self.name
+        return f"{self.agent.name} - {self.name}"
+
 
 class Chat(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chats')

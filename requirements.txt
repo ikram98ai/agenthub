@@ -1,1 +1,2 @@
 Django
+django_debug_toolbar

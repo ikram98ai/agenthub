@@ -1,30 +1,287 @@
-{% extends "base.html" %}
+<!-- templates/agents/agent_list.html -->
+{% extends 'base.html' %}
+
 {% block content %}
-    <div class="container mt-5">
-        <form method="get" id="filter-form">
-            <div class="input-group mb-3">
-                <input type="text" name="q" class="form-control" placeholder="Search agents..." value="{{ request.GET.q }}">
-                <select name="usecase" class="form-select">
-                    <option value="">Filter by Use Case</option>
-                    {% for usecase in usecases %}
-                        <option value="{{ usecase.id }}" {% if usecase.id|stringformat:"s" == request.GET.usecase %}selected{% endif %}>
-                            {{ usecase.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <select name="llm" class="form-select">
-                    <option value="">Filter by LLM</option>
-                    {% for llm in llms %}
-                        <option value="{{ llm.id }}" {% if llm.id|stringformat:"s" == request.GET.llm %}selected{% endif %}>
-                            {{ llm.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-primary" type="submit">Search</button>
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row gap-6">
+        <!-- Sidebar Filters -->
+        <div class="md:w-64 flex-shrink-0">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Filters</h2>
+                </div>
+                
+                <form method="get" id="filter-form" class="p-4 space-y-6">
+                    <!-- Search Bar -->
+                    <div>
+                        <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                        <div class="mt-1">
+                            <input type="text" 
+                                   name="search" 
+                                   id="search" 
+                                   value="{{ current_filters.search }}"
+                                   class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                   placeholder="Search agents...">
+                        </div>
+                    </div>
+
+                    <!-- Sort Options -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                        <select name="sort" 
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="name" {% if current_filters.sort == 'name' %}selected{% endif %}>Name</option>
+                            <option value="created" {% if current_filters.sort == 'created' %}selected{% endif %}>Newest First</option>
+                            <option value="updated" {% if current_filters.sort == 'updated' %}selected{% endif %}>Recently Updated</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       name="status" 
+                                       value=""
+                                       {% if not current_filters.status %}checked{% endif %}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <label class="ml-2 text-sm text-gray-600">All</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       name="status" 
+                                       value="active"
+                                       {% if current_filters.status == 'active' %}checked{% endif %}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <label class="ml-2 text-sm text-gray-600">Active</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       name="status" 
+                                       value="inactive"
+                                       {% if current_filters.status == 'inactive' %}checked{% endif %}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                <label class="ml-2 text-sm text-gray-600">Inactive</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LLM Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">LLMs</label>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300">
+                            {% for llm in llms %}
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="llm" 
+                                       value="{{ llm.id }}"
+                                       {% if llm.id in selected_llms %}checked{% endif %}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                <label class="ml-2 text-sm text-gray-600">{{ llm.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Use Case Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Use Cases</label>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300">
+                            {% for use_case in use_cases %}
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="usecase" 
+                                       value="{{ use_case.id }}"
+                                       {% if use_case.id in selected_usecases %}checked{% endif %}
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                <label class="ml-2 text-sm text-gray-600">{{ use_case.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Filter Actions -->
+                    <div class="space-y-3 pt-4 border-t border-gray-200">
+                        <button type="submit" 
+                                class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Apply Filters
+                        </button>
+                        <a href="{% url 'agent-list' %}" 
+                           class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Clear Filters
+                        </a>
+                    </div>
+                </form>
             </div>
-        </form>
-        <div id="agent-list">
-            {% include 'partials/agent_list.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow mb-6 p-4">
+                <div class="sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">AI Agents</h1>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }} agents
+                        </p>
+                    </div>
+                    <div class="mt-4 sm:mt-0">
+                        <span class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium bg-indigo-100 text-indigo-800">
+                            Active Agents: {{ active_agents }}/{{ total_agents }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agents Grid -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {% for agent in agents %}
+                <div class="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-200">
+                    <div class="px-4 py-5 sm:p-6">
+                        <div class="flex items-center">
+                            {% if agent.icon %}
+                                <img src="{{ agent.icon.url }}" alt="{{ agent.name }}" class="w-16 h-16 rounded-full">
+                            {% else %}
+                                <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                                    <span class="text-2xl text-indigo-600">{{ agent.name|first }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-lg font-medium text-gray-900">{{ agent.name }}</h3>
+                                <p class="text-sm text-gray-500">Updated {{ agent.updated_at|timesince }} ago</p>
+                            </div>
+                            
+                            {% if agent.is_active %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Active
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="mt-4 text-sm text-gray-500">{{ agent.description|truncatewords:30 }}</p>
+                        
+                        <div class="mt-4">
+                            <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">LLMs</h4>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                {% for llm in agent.llms.all %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ llm.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Use Cases</h4>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                {% for use_case in agent.usecases.all %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        {{ use_case.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <a href="{% url 'agent-detail' agent.pk %}" 
+                               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 w-full justify-center">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full">
+                    <div class="text-center py-12 bg-white rounded-lg shadow">
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No agents found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if page_obj.has_previous %}
+                    <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+                       class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing
+                            <span class="font-medium">{{ page_obj.start_index }}</span>
+                            to
+                            <span class="font-medium">{{ page_obj.end_index }}</span>
+                            of
+                            <span class="font-medium">{{ paginator.count }}</span>
+                            results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if page_obj.has_previous %}
+                            <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Previous</span>
+                                Previous
+                            </a>
+                            {% endif %}
+                            
+                            {% for i in paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
+                                    {{ i }}
+                                </span>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ i }}"
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ i }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+                   class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Next
+                </a>
+                {% endif %}
+            </nav>
         </div>
     </div>
+</div>
+{% endif %}
+
+<!-- JavaScript for auto-submit on filter changes -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filter-form');
+    const formInputs = filterForm.querySelectorAll('input[type="checkbox"], select, input[type="radio"]');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            filterForm.submit();
+        });
+    });
+});
+</script>
 {% endblock %}
