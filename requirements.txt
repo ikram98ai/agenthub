@@ -1,2 +1,6 @@
-Django
-django_debug_toolbar
+Django==5.1.4
+django_debug_toolbar==4.4.6
+crewai==0.86.0
+crewai[tools]==0.17.0
+pydantic==2.22
+celery==5.5.0
