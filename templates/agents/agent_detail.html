@@ -31,9 +31,8 @@
                 <h3 class="text-lg font-medium text-gray-900">Supported LLMs</h3>
                 <div class="mt-2 flex flex-wrap gap-2">
                     {% for llm in agent.llms.all %}
-                        <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-md">
-                            <h4 class="font-medium">{{ llm.name }}</h4>
-                            <p class="text-sm">{{ llm.description|truncatewords:20 }}</p>
+                        <div class="bg-blue-100 text-blue-800 px-4  rounded-md">
+                            <h4 class="text-sm font-medium">{{ llm.name }}</h4>
                         </div>
                     {% endfor %}
                 </div>
@@ -43,9 +42,8 @@
                 <h3 class="text-lg font-medium text-gray-900">Use Cases</h3>
                 <div class="mt-2 flex flex-wrap gap-2">
                     {% for use_case in agent.usecases.all %}
-                        <div class="bg-green-100 text-green-800 px-4 py-2 rounded-md">
-                            <h4 class="font-medium">{{ use_case.name }}</h4>
-                            <p class="text-sm">{{ use_case.description|truncatewords:20 }}</p>
+                        <div class="bg-green-100 text-green-800 px-4  rounded-md">
+                            <h4 class="text-sm font-medium">{{ use_case.name }}</h4>
                         </div>
                     {% endfor %}
                 </div>
@@ -56,18 +54,75 @@
                 <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {% for input in inputs %}
                         <div class="border rounded-lg p-4">
-                            <h4 class="font-medium text-gray-900">{{ input.name }}</h4>
-                            <p class="text-sm text-gray-500">Type: {{ input.input_type }}</p>
+                            <h4 class="font-medium text-gray-900">{{ input.name }}
+                                <span class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if input.is_required %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ input.is_required|yesno:"Required,Optional" }}
+                                </span>
+                                <!-- <span class="text-sm text-gray-500">Type: {{ input.input_type }}</p> -->
+                            </h4>
                             {% if input.description %}
                                 <p class="mt-2 text-sm text-gray-600">{{ input.description }}</p>
                             {% endif %}
-                            <span class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if input.is_required %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ input.is_required|yesno:"Required,Optional" }}
-                            </span>
                         </div>
                     {% endfor %}
                 </div>
             </div>
+
+            <div >
+                <h3 class="text-lg font-medium text-gray-900">Run Agent</h3>
+                <div class="mt-4 bg-gray-50 p-6 rounded-lg shadow grid grid-flow-col  flex:sm  gap-4">
+
+                    <form class="col-span-1 pr-8" method="post" action="{% url 'agent-run' agent.id %}" enctype="multipart/form-data" >
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-4">
+                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                {{ field.label }}
+                            </label>
+                            <div class="mt-1">
+                                {{ field }}
+                                {% if field.help_text %}
+                                <p class="mt-2 text-sm text-gray-500">{{ field.help_text }}</p>
+                                {% endif %}
+                            </div>
+                            {% if field.errors %}
+                            <p class="text-red-500 text-sm mt-2">{{ field.errors }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <div class="flex justify-start">
+                            <button type="submit" class="bg-indigo-600 text-white font-bold px-6 py-2 rounded-md hover:bg-indigo-700 focus:ring focus:ring-indigo-300 focus:outline-none">
+                                Run Agent
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if agent.responses.first %}
+                    <div class="col-span-2">
+                        <!-- <h3 class="text-lg font-bold text-gray-900">Recent Responses</h3> -->
+                        <ul class="">
+                            {% with response=agent.responses.first %}
+                                <li class="mb-2">
+                                    <p><strong>Inputs:</strong> 
+                                        {% for input in response.response_inputs.all %}
+                                        <span class="mb-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><strong>{{input}}</strong> </span>
+                                        {% endfor %}
+                                    </p>
+                                    
+                                    <p class="mb-2"><strong>Output:</strong> <span class="text-xs"><strong>exe time:</strong> {{ response.execution_time }}s</span></p>
+                                    <hr class="mb-2"/>
+                                    <p>{{ response.get_html_content|safe }} </p>
+                                </li>
+                            {% endwith %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+           
+
         </div>
     </div>
 </div>

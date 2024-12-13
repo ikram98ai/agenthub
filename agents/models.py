@@ -63,6 +63,14 @@ class AgentResponse(models.Model):
     def __str__(self):
         return f"{self.agent.name} - {self.user.username}"
 
+    def execution_time(self):
+        return (self.completed_at - self.started_at).seconds
+    class Meta:
+        ordering = ['-started_at']
+
+    def get_html_content(self):
+        from markdown2 import markdown
+        return markdown(self.output) if self.output else None
 
 class AgentResponseInput(models.Model):
     agent_response = models.ForeignKey(AgentResponse, on_delete=models.CASCADE, related_name='response_inputs')
@@ -72,4 +80,4 @@ class AgentResponseInput(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.agent_response.user.username} - {self.agent_input.name}: {self.value}"
+        return f" {self.agent_input.name}: {self.value}"

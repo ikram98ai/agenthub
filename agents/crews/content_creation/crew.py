@@ -29,7 +29,7 @@ class ContentCreation():
 	@before_kickoff # Optional hook to be executed before the crew starts
 	def pull_data_example(self, inputs:dict):
 		# Example of pulling data from an external API, dynamically changing the inputs
-		# inputs['extra_data'] = "This is extra data"
+		inputs['news_impact_consideration'] = True
 		financial_trading_inputs = {
 			'stock_selection': 'AAPL',
 			'initial_capital': '100000',

@@ -14,8 +14,7 @@ SECRET_KEY = 'django-insecure-5-w!1epzn8jt@6bj$-x(y^tm-c771pzpo)6s5dal^2^+mq_+qw
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-
+INTERNAL_IPS = [ '127.0.0.1', ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -27,6 +26,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'debug_toolbar',
+    'django_celery_results',
+
     'agents',
 ]
 
@@ -61,7 +62,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -71,7 +71,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -91,7 +90,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -102,7 +100,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -118,3 +115,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0' # URL for Redis
+CELERY_ACCEPT_CONTENT = ['json']               # Content types allowed
+CELERY_TASK_SERIALIZER = 'json'                # Serialize tasks as JSON
+
+# Celery Result Backend
+CELERY_RESULT_BACKEND = 'django-db'

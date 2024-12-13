@@ -1,8 +1,16 @@
 from django.views.generic import ListView, DetailView
-from django.shortcuts import render
-from .models import Agent, AgentLLM, Usecase, AgentInput
+from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.contrib import messages
+
+from django.urls import reverse_lazy
+from django.http import  HttpResponseRedirect
+from django.views import View
+
+from .tasks import execute_agent
+from .forms import AgentInputForm
+from .models import Agent, AgentInput, AgentLLM, Usecase, AgentResponse, AgentResponseInput
+
 
 class AgentListView(ListView):
     model = Agent
@@ -84,5 +92,45 @@ class AgentDetailView(DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['inputs'] = self.object.inputs.all()
+        agent = self.get_object()
+        context['inputs'] = agent.inputs.all()
+        context['form'] = AgentInputForm(agent=agent)  # Add the form to the context
         return context
+
+
+
+class AgentRunSubmitView(View):
+    def post(self, request, *args, **kwargs):
+        agent = get_object_or_404(Agent, pk=self.kwargs['pk'])
+        form = AgentInputForm(request.POST, request.FILES, agent=agent)
+
+        if form.is_valid():
+            user = request.user
+            
+            # Create an AgentResponse
+            response = AgentResponse.objects.create(agent=agent, user=user)
+
+            # Save inputs
+            inputs = {}
+            for field_name, value in form.cleaned_data.items():
+                agent_input_id = int(field_name.split('_')[1])
+                agent_input = agent.inputs.get(pk=agent_input_id)
+                inputs[agent_input.name] = value
+
+                AgentResponseInput.objects.create(
+                    agent_response=response,
+                    agent_input=agent_input,
+                    value=value
+                )
+
+            # Trigger Celery task
+            task = execute_agent.delay(agent.name, inputs, response_id=response.id)
+            response.output = f"Task ID: {task.id} (Pending)"
+            response.completed_at = None
+            response.save()
+
+            messages.success(request, "Agent execution started.")
+            return HttpResponseRedirect(reverse_lazy('agent-detail', kwargs={'pk': agent.pk}))
+
+        messages.error(request, "Failed to submit inputs.")
+        return HttpResponseRedirect(reverse_lazy('agent-detail', kwargs={'pk': agent.pk}))

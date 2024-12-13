@@ -1,9 +1,23 @@
-FROM python:3.10-slim
+FROM python:3.12
 
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-COPY . /app
+# Required to install mysqlclient with Pip
+RUN apt-get update \
+  && apt-get install python3-dev default-libmysqlclient-dev gcc -y
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Install pipenv
+RUN pip install --upgrade pip 
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Install application dependencies
+COPY requirements.txt /app/
+# We use the --system flag so packages are installed into the system python
+# and not into a virtualenv. Docker containers don't need virtual environments. 
+RUN pip install -requirements.txt --system --dev
+
+# Copy the application files into the image
+COPY . /app/
+
+# Expose port 8000 on the container
+EXPOSE 8000

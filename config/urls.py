@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 
-admin.site.site_header = "Bookishpdf's Admin"
+admin.site.site_header = "AgentHub's Admin"
 admin.site.index_title = 'Admin'
 
 
