@@ -1,11 +1,10 @@
 from django.db import models
-from django.contrib.auth.models import User  # For user authentication
+from django.contrib.auth import get_user_model
 
 
 # models.py
 from django.db import models
 from django.urls import reverse
-
 
 class Usecase(models.Model):
     name = models.CharField(max_length=100)
@@ -27,7 +26,7 @@ class Agent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
+    uploaded_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, related_name='agents')
     usecases = models.ManyToManyField(Usecase, related_name='agents',blank=True)
     llms =  models.ManyToManyField(AgentLLM, related_name='agents',blank=True)
     def __str__(self):
@@ -36,6 +35,12 @@ class Agent(models.Model):
 
     def get_absolute_url(self):
         return reverse('agent-detail', args=[str(self.id)])
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['name', 'is_active']),
+            models.Index(fields=['-created_at'])
+        ]
 
 
 class AgentInput(models.Model):
@@ -53,20 +58,43 @@ class AgentInput(models.Model):
     def __str__(self):
         return f"{self.agent.name} - {self.name}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['agent', 'input_type'])
+        ]
 
 class AgentResponse(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='responses')
+    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL,null=True, related_name='responses')
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='responses')
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(auto_now=True)
     output = models.TextField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed')
+        ],
+        default='pending',
+        db_index=True
+    )
+    error_message = models.TextField(null=True, blank=True)
+    task_id = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['user', '-started_at']),
+            models.Index(fields=['agent', 'status'])
+        ]
+
     def __str__(self):
         return f"{self.agent.name} - {self.user.username}"
 
     def execution_time(self):
         return (self.completed_at - self.started_at).seconds
-    class Meta:
-        ordering = ['-started_at']
 
     def get_html_content(self):
         from markdown2 import markdown

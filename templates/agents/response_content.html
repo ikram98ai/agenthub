@@ -1,0 +1,16 @@
+<div class="col-span-2">
+    <!-- <h3 class="text-lg font-bold text-gray-900">Recent Responses</h3> -->
+    <ul class="">
+            <li class="mb-2">
+                <p><strong>Inputs:</strong> 
+                    {% for input in response.response_inputs.all %}
+                    <span class="mb-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><strong>{{input}}</strong> </span>
+                    {% endfor %}
+                </p>
+                
+                <p class="mb-2"><strong>Output:</strong> <span class="text-xs"><strong>exe time:</strong> {{ response.execution_time }}s</span></p>
+                <hr class="mb-2"/>
+                <p>{{ response.get_html_content|safe }} </p>
+            </li>
+    </ul>
+</div>

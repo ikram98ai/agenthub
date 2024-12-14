@@ -1,35 +1,94 @@
+# tasks.py
 from celery import shared_task
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.utils import timezone
+from .crews.content_creation.crew import ContentCreation
+from .crews.financial_analysis.crew import FinancialAnalysis
 from .models import AgentResponse
-from agents.crews.content_creation.crew import ContentCreation
-from agents.crews.financial_analysis.crew import FinancialAnalysis
 
-@shared_task
-def execute_agent(agent_name: str, inputs: dict, response_id=None):
+@shared_task(bind=True)
+def execute_agent(self, agent_name: str, inputs: dict, response_id=None):
     """
-    Execute the given agent asynchronously.
+    Execute the agent and send real-time updates through WebSocket
     """
-    agent_map = {
-        "content_creation": ContentCreation,
-        "Financial analysis": FinancialAnalysis,
-    }
+    channel_layer = get_channel_layer()
+    
+    try:
+        # Get the response object
+        response = AgentResponse.objects.get(id=response_id)
+        agent_id = response.agent.id
+        
+        # Send initial status
+        async_to_sync(channel_layer.group_send)(
+            f'agent_{agent_id}',
+            {
+                'type': 'task_update',
+                'data': {
+                    'status': 'processing',
+                    'message': 'Task started processing',
+                    'response_id': response_id,
+                    'task_id': self.request.id
+                }
+            }
+        )
 
-    if agent_name not in agent_map:
-        raise ValueError(f"Agent '{agent_name}' not found.")
+        # Your existing agent execution logic
+        agent_map = {
+            "content_creation": ContentCreation,
+            "Financial analysis": FinancialAnalysis,
+        }
 
-    agent_class = agent_map[agent_name]()
-    result = str(agent_class.crew().kickoff(inputs=inputs))
+        if agent_name not in agent_map:
+            raise ValueError(f"Agent '{agent_name}' not found.")
 
-    # Update the AgentResponse with the result
-    if response_id:
-        try:
-            agent_response = AgentResponse.objects.get(id=response_id)
-            agent_response.output = result
-            agent_response.save()
-        except AgentResponse.DoesNotExist as e:
-             # Update response with an error message
-            response = AgentResponse.objects.get(pk=response_id)
-            response.output = f"Error: {str(e)}"
-            response.save()
+        agent_class = agent_map[agent_name]()
+        result = str(agent_class.crew().kickoff(inputs=inputs))
 
+        # Update response in database
+        response.output = result
+        response.completed_at = timezone.now()
+        response.status = 'completed'
+        response.save()
 
-    return result
+        # Send completion status
+        async_to_sync(channel_layer.group_send)(
+            f'agent_{agent_id}',
+            {
+                'type': 'task_update',
+                'data': {
+                    'status': 'completed',
+                    'output': response.get_html_content(),
+                    'execution_time': response.execution_time(),
+                    'response_id': response_id
+                }
+            }
+        )
+
+        return result
+
+    except Exception as e:
+        if response_id:
+            try:
+                response = AgentResponse.objects.get(id=response_id)
+                response.status = 'failed'
+                response.error_message = str(e)
+                response.completed_at = timezone.now()
+                response.save()
+
+                # Send error status
+                async_to_sync(channel_layer.group_send)(
+                    f'agent_{response.agent.id}',
+                    {
+                        'type': 'task_update',
+                        'data': {
+                            'status': 'failed',
+                            'error': str(e),
+                            'response_id': response_id
+                        }
+                    }
+                )
+            except Exception as inner_e:
+                print(f"Error updating response: {inner_e}")
+
+        raise

@@ -97,9 +97,9 @@
                         </div>
                     </form>
 
-                    {% if agent.responses.first %}
+                    <!-- {% if agent.responses.first %}
                     <div class="col-span-2">
-                        <!-- <h3 class="text-lg font-bold text-gray-900">Recent Responses</h3> -->
+                        <h3 class="text-lg font-bold text-gray-900">Recent Responses</h3>
                         <ul class="">
                             {% with response=agent.responses.first %}
                                 <li class="mb-2">
@@ -116,14 +116,104 @@
                             {% endwith %}
                         </ul>
                     </div>
-                    {% endif %}
+                    {% endif %} -->
 
                 </div>
             </div>
 
-           
-
         </div>
     </div>
 </div>
+
+<div id="response-section" class="col-span-2">
+    <div id="loading-indicator" class="hidden">
+        <div class="flex items-center justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <span class="ml-2">Processing...</span>
+        </div>
+    </div>
+    
+    <div id="response-content">
+        {% if agent.responses.first %}
+            {% include 'agents/response_content.html' with response=agent.responses.first %}
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const agentId = '{{ agent.id }}';
+        const responseSection = document.getElementById('response-section');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const responseContent = document.getElementById('response-content');
+        const form = document.querySelector('form');
+
+        // Connect to WebSocket
+        const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(
+            `${ws_scheme}://${window.location.host}/ws/agent/${agentId}/`
+        );
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.status === 'completed') {
+                loadingIndicator.classList.add('hidden');
+                
+                // Create response HTML
+                const responseHtml = `
+                    <div class="mb-2">
+                        <p><strong>Output:</strong> <span class="text-xs">
+                            <strong>exe time:</strong> ${data.execution_time}s</span>
+                        </p>
+                        <hr class="mb-2"/>
+                        <p>${data.output}</p>
+                    </div>
+                `;
+                
+                responseContent.innerHTML = responseHtml;
+            } else if (data.status === 'failed') {
+                loadingIndicator.classList.add('hidden');
+                responseContent.innerHTML = `
+                    <div class="text-red-500">
+                        Error: ${data.error}
+                    </div>
+                `;
+            }
+        };
+
+        // Handle form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            loadingIndicator.classList.remove('hidden');
+            responseContent.innerHTML = '';
+            
+            // Submit form via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    throw new Error(data.errors);
+                }
+            })
+            .catch(error => {
+                loadingIndicator.classList.add('hidden');
+                responseContent.innerHTML= `
+                    <div class="text-red-500">
+                        Error submitting form: ${error}
+                    </div>
+                `;
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}

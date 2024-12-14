@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     
     'debug_toolbar',
     'django_celery_results',
+    'channels',
 
     'agents',
 ]
@@ -123,3 +124,25 @@ CELERY_TASK_SERIALIZER = 'json'                # Serialize tasks as JSON
 
 # Celery Result Backend
 CELERY_RESULT_BACKEND = 'django-db'
+
+
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+# For AWS deployment
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("your-elasticache-endpoint.cache.amazonaws.com", 6379)],
+#         },
+#     },
+# }

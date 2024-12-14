@@ -10,3 +10,6 @@ django-redis
 whitenoise
 gunicorn
 django_debug_toolbar
+channels 
+channels-redis
+daphne
