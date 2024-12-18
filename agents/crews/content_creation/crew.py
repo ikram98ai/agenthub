@@ -37,7 +37,7 @@ class ContentCreation():
 			'trading_strategy_preference': 'Day Trading',
 			'news_impact_consideration': True
 		}
-		
+		 
 		return inputs
 
 	@after_kickoff # Optional hook to be executed after the crew has finished

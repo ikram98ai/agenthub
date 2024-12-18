@@ -109,3 +109,8 @@ class AgentResponseInput(models.Model):
 
     def __str__(self):
         return f" {self.agent_input.name}: {self.value}"
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['agent_response', 'agent_input']),
+        ]

@@ -5,6 +5,7 @@ from django.views import View
 from .tasks import execute_agent
 from .forms import AgentInputForm
 from .models import Agent, AgentInput, AgentLLM, Usecase, AgentResponse, AgentResponseInput
+from django.db.models import Prefetch
 
 from django.views.generic import View
 from django.shortcuts import get_object_or_404
@@ -148,51 +149,30 @@ class AgentListView(ListView):
 
 
 class AgentDetailView(DetailView):
-    model = Agent
+    model = Agent     
     template_name = 'agents/agent_detail.html'
     context_object_name = 'agent'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         agent = self.get_object()
+
+        responses = (
+            AgentResponse.objects
+            .filter(agent=agent, user=self.request.user)
+            .select_related('agent', 'user')
+            .prefetch_related(
+                Prefetch(
+                    'response_inputs',
+                    queryset=AgentResponseInput.objects.select_related('agent_input')  # Optimize nested FK
+                )
+            )
+        )
+
         context['inputs'] = agent.inputs.all()
+        context['responses'] = responses
+
         context['form'] = AgentInputForm(agent=agent)  # Add the form to the context
         return context
 
 
-
-# class AgentRunSubmitView(View):
-#     def post(self, request, *args, **kwargs):
-#         agent = get_object_or_404(Agent, pk=self.kwargs['pk'])
-#         form = AgentInputForm(request.POST, request.FILES, agent=agent)
-
-#         if form.is_valid():
-#             user = request.user
-            
-#             # Create an AgentResponse
-#             response = AgentResponse.objects.create(agent=agent, user=user)
-
-#             # Save inputs
-#             inputs = {}
-#             for field_name, value in form.cleaned_data.items():
-#                 agent_input_id = int(field_name.split('_')[1])
-#                 agent_input = agent.inputs.get(pk=agent_input_id)
-#                 inputs[agent_input.name] = value
-
-#                 AgentResponseInput.objects.create(
-#                     agent_response=response,
-#                     agent_input=agent_input,
-#                     value=value
-#                 )
-
-#             # Trigger Celery task
-#             task = execute_agent.delay(agent.name, inputs, response_id=response.id)
-#             response.output = f"Task ID: {task.id} (Pending)"
-#             response.completed_at = None
-#             response.save()
-
-#             messages.success(request, "Agent execution started.")
-#             return HttpResponseRedirect(reverse_lazy('agent-detail', kwargs={'pk': agent.pk}))
-
-#         messages.error(request, "Failed to submit inputs.")
-#         return HttpResponseRedirect(reverse_lazy('agent-detail', kwargs={'pk': agent.pk}))

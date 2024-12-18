@@ -1,16 +1,50 @@
-<div class="col-span-2">
-    <!-- <h3 class="text-lg font-bold text-gray-900">Recent Responses</h3> -->
-    <ul class="">
-            <li class="mb-2">
-                <p><strong>Inputs:</strong> 
-                    {% for input in response.response_inputs.all %}
-                    <span class="mb-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><strong>{{input}}</strong> </span>
-                    {% endfor %}
-                </p>
-                
-                <p class="mb-2"><strong>Output:</strong> <span class="text-xs"><strong>exe time:</strong> {{ response.execution_time }}s</span></p>
-                <hr class="mb-2"/>
-                <p>{{ response.get_html_content|safe }} </p>
-            </li>
-    </ul>
-</div>
+{% for response in responses %}
+    <div class="bg-white shadow-md rounded-lg mb-4 p-4 border border-gray-200">
+        <div class="mb-4">
+            <!-- <h3 class="text-lg font-bold text-gray-900">Response {{ forloop.counter }}</h3> -->
+            <div class="flex flex-wrap gap-2">
+                <strong class="text-sm font-medium">Inputs:</strong> 
+                {% for input in response.response_inputs.all %}
+                <span class="inline-flex items-center px-3  rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                    {{ input }}
+                </span>
+                {% endfor %}
+            </div>
+            <p class="text-gray-500">{{ response.started_at|timesince }} ago</p>
+
+        </div>
+        <div class="mt-4">
+            <button 
+                id="toggle-button-{{ forloop.counter }}" 
+                onclick="toggleDetails({{ forloop.counter }})" 
+                class="bg-gray-100 hover:bg-gray-700 hover:text-white text-black font-medium px-4 rounded">
+                View More
+            </button>
+        </div>
+        <div id="details-{{ forloop.counter }}" class="hidden mt-4">
+            <p class="text-sm text-gray-700"><strong>Execution Time:</strong> {{ response.execution_time }}s</p>
+            <hr class="my-2">
+            <div class="text-gray-800 text-sm">
+                {{ response.get_html_content|safe }}
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+    function toggleDetails(counter) {
+        const detailsElement = document.getElementById(`details-${counter}`);
+        const buttonElement = document.getElementById(`toggle-button-${counter}`);
+        console.log("button",buttonElement)
+        if (detailsElement.classList.contains('hidden')) {
+            detailsElement.classList.remove('hidden');
+            buttonElement.textContent = "View Less"; // Change button text to "View Less"
+
+        } else {
+            detailsElement.classList.add('hidden');
+            buttonElement.textContent = "View More"; // Change button text back to "View More"
+
+        }
+    }
+</script>
+
