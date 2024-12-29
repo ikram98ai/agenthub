@@ -68,10 +68,14 @@ class AgentResponseInputInline(admin.TabularInline):
 
 @admin.register(AgentResponse)
 class AgentResponseAdmin(admin.ModelAdmin):
-    list_display = ('user', 'agent', 'started_at')
+    list_display = ('user', 'agent', 'started_at','status','display_output')
     search_fields = ('user__username', 'agent__name')
     list_filter = ('agent', 'started_at')
     inlines = [AgentResponseInputInline]  # Include response inputs inline when creating an agent response
+
+    def display_output(self, obj):
+        return obj.output[:100] if obj.output else ''
+    display_output.short_description = "Agent's output"
 
     def save_model(self, request, obj, form, change):
         # Ensure that at least one response input is created when saving an agent response

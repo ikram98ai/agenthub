@@ -4,7 +4,10 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 from .crews.content_creation.crew import ContentCreation
+from .crews.event_planning.crew import EventPlanning
+from .crews.customer_outreach.crew import CustomerOutreach
 from .crews.financial_analysis.crew import FinancialAnalysis
+from .crews.research_write_article.crew import ArticleResearchWriter
 from .models import AgentResponse
 
 @shared_task(bind=True)
@@ -35,18 +38,21 @@ def execute_agent(self, agent_name: str, inputs: dict, response_id=None):
 
         # Your existing agent execution logic
         agent_map = {
-            "content_creation": ContentCreation,
+            "Content creation": ContentCreation,
             "Financial analysis": FinancialAnalysis,
+            "Customer outreach": CustomerOutreach,
+            "Event planning": EventPlanning,
+            "Research write article": ArticleResearchWriter
         }
 
         if agent_name not in agent_map:
             raise ValueError(f"Agent '{agent_name}' not found.")
 
         agent_class = agent_map[agent_name]()
-        result = str(agent_class.crew().kickoff(inputs=inputs))
+        result = agent_class.crew().kickoff(inputs=inputs)
 
         # Update response in database
-        response.output = result
+        response.output = str(result)
         response.completed_at = timezone.now()
         response.status = 'completed'
         response.save()

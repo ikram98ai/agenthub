@@ -29,15 +29,6 @@ class ContentCreation():
 	@before_kickoff # Optional hook to be executed before the crew starts
 	def pull_data_example(self, inputs:dict):
 		# Example of pulling data from an external API, dynamically changing the inputs
-		inputs['news_impact_consideration'] = True
-		financial_trading_inputs = {
-			'stock_selection': 'AAPL',
-			'initial_capital': '100000',
-			'risk_tolerance': 'Medium',
-			'trading_strategy_preference': 'Day Trading',
-			'news_impact_consideration': True
-		}
-		 
 		return inputs
 
 	@after_kickoff # Optional hook to be executed after the crew has finished
@@ -113,7 +104,7 @@ class ContentCreation():
 			config=self.tasks_config['quality_assurance'],
 			output_file='output/content_creation/quality_assurance_task_report.md',
 			agent=self.quality_assurance_agent(),
-    		output_pydantic=ContentOutput
+    		# output_pydantic=ContentOutput
 		)
 
 	@crew

@@ -58,10 +58,11 @@ class AgentRunSubmitView(View):
             
             # Bulk create input records
             AgentResponseInput.objects.bulk_create(input_objects)
-            
+            print("TASK IS STARTING....")
             # Trigger Celery task
             task = execute_agent.delay(agent.name, inputs, response_id=response.id)
-            
+            print("TASK IS COMPLETED....")
+
             return JsonResponse({
                 'status': 'success',
                 'response_id': response.id,
